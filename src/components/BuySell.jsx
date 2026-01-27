@@ -13,7 +13,6 @@ const BuySell = ({ onBack }) => {
     itemName: '', price: '', contact: '', description: '', image: ''
   });
 
-  // Fetch Live Items from Firebase
   const fetchMarketplaceItems = async () => {
     setLoading(true);
     try {
@@ -35,7 +34,6 @@ const BuySell = ({ onBack }) => {
     fetchMarketplaceItems();
   }, []);
 
-  // Updated Image Upload with Compression
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -45,16 +43,13 @@ const BuySell = ({ onBack }) => {
         img.src = reader.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600; // Optimal width for mobile/web
+          const MAX_WIDTH = 600; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
-
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Quality is set to 0.7 (70%) to keep it under Firestore's 1MB limit
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
           setFormData({ ...formData, image: dataUrl });
         };
       };
@@ -62,7 +57,6 @@ const BuySell = ({ onBack }) => {
     }
   };
 
-  // Post to Firebase Cloud
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.itemName || !formData.price || !formData.contact) {
@@ -70,22 +64,31 @@ const BuySell = ({ onBack }) => {
     }
     
     try {
+      // 1. SAVE TO PRODUCTS COLLECTION (For the Marketplace UI)
       await addDoc(collection(db, "products"), {
         ...formData,
         createdAt: serverTimestamp()
+      });
+
+      // 2. SAVE TO NOTIFICATIONS COLLECTION (For the Bell Icon)
+      // This will automatically create the 'notifications' collection in your Firestore
+      await addDoc(collection(db, "notifications"), {
+        title: "New Item in Marketplace 🛍️",
+        desc: `${formData.itemName} for ₹${formData.price}`,
+        time: serverTimestamp(),
+        unread: true 
       });
       
       setFormData({ itemName: '', price: '', contact: '', description: '', image: '' });
       setShowAddForm(false);
       fetchMarketplaceItems();
-      alert("Success! Your item is live.");
+      alert("Success! Your item is live and students have been notified.");
     } catch (error) {
       console.error("Firebase Error:", error);
       alert("Error posting item: " + error.message);
     }
   };
 
-  // Delete from Firebase Cloud
   const deleteItem = async (id) => {
     const contactInput = prompt("Enter the contact info used for this listing to confirm removal:");
     if (!contactInput) return;
@@ -135,8 +138,6 @@ const BuySell = ({ onBack }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            id="searchMarket"
-            name="searchMarket"
             placeholder="Search products..." 
             className="w-full pl-12 pr-4 py-4 bg-slate-100 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -189,8 +190,6 @@ const BuySell = ({ onBack }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <input 
                 type="text" 
-                id="productName"
-                name="productName"
                 placeholder="What are you selling?*" 
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
                 value={formData.itemName}
@@ -201,8 +200,6 @@ const BuySell = ({ onBack }) => {
                 <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                     type="number" 
-                    id="productPrice"
-                    name="productPrice"
                     placeholder="Price (₹)*" 
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
                     value={formData.price}
@@ -211,8 +208,6 @@ const BuySell = ({ onBack }) => {
                 />
               </div>
               <textarea 
-                id="productDesc"
-                name="productDesc"
                 placeholder="Condition, age, or features..." 
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500 h-24 font-medium"
                 value={formData.description}
@@ -220,8 +215,6 @@ const BuySell = ({ onBack }) => {
               />
               <input 
                 type="text" 
-                id="sellerContact"
-                name="sellerContact"
                 placeholder="Your Contact (Phone/Email)*" 
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
                 value={formData.contact}
@@ -233,7 +226,7 @@ const BuySell = ({ onBack }) => {
                 <span className="text-sm font-black">{formData.image ? "Photo Added!" : "Add Item Photo"}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
-              <button type="submit" className="w-full bg-indigo-600 text-white p-5 rounded-2xl font-black shadow-lg">
+              <button type="submit" className="w-full bg-indigo-600 text-white p-5 rounded-2xl font-black shadow-lg active:scale-95 transition-transform">
                 Post Listing
               </button>
             </form>

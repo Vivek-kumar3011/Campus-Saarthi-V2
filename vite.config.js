@@ -8,9 +8,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: './', // 👈 YE SABSE ZAROORI HAI! Isse path /assets se ./assets ho jayega.
+  server: {
+    watch: {
+      usePolling: true, // 👈 Windows users ke liye zaroori hai code changes reflect karne ke liye
+    },
+  },
+  base: './', // 👈 Path fix for assets
   build: {
-    outDir: 'dist', // 👈 Confirm karein ki output 'dist' folder mein ja raha hai
+    outDir: 'dist', 
     emptyOutDir: true,
   }
 })

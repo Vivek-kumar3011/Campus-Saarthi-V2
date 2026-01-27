@@ -26,17 +26,14 @@ const Opportunities = ({ onBack }) => {
 
   const ADMIN_PASSWORD = "campusadmin123";
 
-  // REAL-TIME SYNC LOGIC (Updated for Index & Real-time)
+  // REAL-TIME SYNC LOGIC
   useEffect(() => {
     setLoading(true);
-    
-    // Index-based query: Make sure you have created the index in Firebase Console
     const q = query(
       collection(db, "opportunities"), 
       orderBy("createdAt", "desc")
     );
 
-    // Listens for changes automatically (No manual fetch needed)
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -49,28 +46,37 @@ const Opportunities = ({ onBack }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener
+    return () => unsubscribe(); 
   }, []);
 
-  // ADD OPPORTUNITY
+  // ADD OPPORTUNITY WITH NOTIFICATION TRIGGER
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return alert("Opportunity name is required!");
     
     try {
+      // 1. SAVE TO 'opportunities' COLLECTION
       await addDoc(collection(db, "opportunities"), {
         ...formData,
-        createdAt: serverTimestamp() // Always use serverTimestamp for indexing
+        createdAt: serverTimestamp() 
       });
+
+      // 2. TRIGGER THE BELL ICON (notifications collection)
+      await addDoc(collection(db, "notifications"), {
+        title: `New ${formData.category} Alert! 🚀`,
+        desc: formData.name,
+        time: serverTimestamp(),
+        unread: true
+      });
+
       setFormData({ name: '', description: '', category: 'Internship', link: '', contact: '' });
       setShowAddForm(false);
-      alert("Posted to Career Board! 🚀");
+      alert("Posted to Career Board & Notifications sent! 🚀");
     } catch (error) {
       alert("Error: " + error.message);
     }
   };
 
-  // DELETE OPPORTUNITY
   const removeOpp = async (id) => {
     if (window.confirm("Delete this opportunity?")) {
       try {
@@ -128,7 +134,6 @@ const Opportunities = ({ onBack }) => {
       </div>
 
       <div className="max-w-xl mx-auto px-6">
-        {/* Form Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6">
             <form onSubmit={handleAdd} className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -158,7 +163,6 @@ const Opportunities = ({ onBack }) => {
           </div>
         )}
 
-        {/* Opportunities List */}
         <div className="space-y-4">
           {loading ? (
             <div className="flex flex-col items-center py-20">
@@ -172,7 +176,7 @@ const Opportunities = ({ onBack }) => {
                   {opp.category}
                 </span>
                 {isAdmin && password === ADMIN_PASSWORD && (
-                  <button onClick={() => removeOpp(opp.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                  <button onClick={() => removeOpp(opp.id)} className="text-slate-200 hover:text-red-500 transition-colors p-1">
                     <Trash2 size={18} />
                   </button>
                 )}

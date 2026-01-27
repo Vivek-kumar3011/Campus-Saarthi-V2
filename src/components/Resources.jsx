@@ -23,17 +23,14 @@ const Resources = ({ onBack }) => {
   const [formData, setFormData] = useState({ title: '', url: '', category: 'Notes' });
   const ADMIN_PASSWORD = "campusadmin123";
 
-  // REAL-TIME SYNC LOGIC (Updated for Index & Performance)
+  // REAL-TIME SYNC LOGIC
   useEffect(() => {
     setLoading(true);
-    
-    // Querying the "resources" collection
     const q = query(
       collection(db, "resources"), 
       orderBy("createdAt", "desc")
     );
 
-    // Snapshot listener for real-time updates across all devices
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -46,10 +43,10 @@ const Resources = ({ onBack }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup on unmount
+    return () => unsubscribe(); 
   }, []);
 
-  // ADD RESOURCE
+  // ADD RESOURCE WITH NOTIFICATION
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.url) return alert("All fields are required!");
@@ -59,19 +56,28 @@ const Resources = ({ onBack }) => {
     }
 
     try {
+      // 1. SAVE TO 'resources' COLLECTION
       await addDoc(collection(db, "resources"), {
         ...formData,
-        createdAt: serverTimestamp() // Essential for the "orderBy" index to work
+        createdAt: serverTimestamp() 
       });
+
+      // 2. TRIGGER THE BELL ICON (notifications collection)
+      await addDoc(collection(db, "notifications"), {
+        title: "New Study Resource 📚",
+        desc: `${formData.category}: ${formData.title}`,
+        time: serverTimestamp(),
+        unread: true
+      });
+
       setFormData({ title: '', url: '', category: 'Notes' });
       setShowAddForm(false);
-      alert("Resource added to Campus Cloud! ☁️");
+      alert("Resource added and students notified! ☁️");
     } catch (error) {
       alert("Error: " + error.message);
     }
   };
 
-  // DELETE RESOURCE
   const removeResource = async (id) => {
     if (window.confirm("Delete this resource?")) {
       try {
@@ -117,8 +123,8 @@ const Resources = ({ onBack }) => {
       </div>
 
       <div className="max-w-xl mx-auto px-6">
-        {/* Featured Resources (Static Links) */}
-        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Featured</h3>
+        {/* Featured Resources */}
+        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Featured</h3>
         <div className="grid grid-cols-1 gap-4 mb-8">
           <a href="https://drive.google.com/drive/u/0/folders/1X3AEV93QzFJU531xGhjzTGuRuUYpjXcd" target="_blank" rel="noreferrer"
             className="flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:border-indigo-500 transition-all active:scale-95">
@@ -129,7 +135,7 @@ const Resources = ({ onBack }) => {
                 <p className="text-xs text-slate-500">Previous Year Questions</p>
               </div>
             </div>
-            <ExternalLink size={18} className="text-slate-300" />
+            <ExternalLink size={18} className="text-slate-200" />
           </a>
 
           <a href="https://gpa-calculator-gold.vercel.app/" target="_blank" rel="noreferrer"
@@ -141,13 +147,13 @@ const Resources = ({ onBack }) => {
                 <p className="text-xs text-slate-500">Calculate your SGPA/CGPA</p>
               </div>
             </div>
-            <ExternalLink size={18} className="text-slate-300" />
+            <ExternalLink size={18} className="text-slate-200" />
           </a>
         </div>
 
         {/* Dynamic Admin-added Resources */}
         {(extraResources.length > 0 || loading) && (
-          <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Campus Contribution</h3>
+          <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Campus Contribution</h3>
         )}
         
         <div className="space-y-3">
@@ -162,7 +168,7 @@ const Resources = ({ onBack }) => {
                 className="flex items-center gap-4 p-5 bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95">
                 <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase whitespace-nowrap">{res.category}</div>
                 <span className="font-bold text-slate-700 flex-1 truncate">{res.title}</span>
-                <ExternalLink size={16} className="text-slate-300" />
+                <ExternalLink size={16} className="text-slate-200" />
               </a>
               {isAdmin && password === ADMIN_PASSWORD && (
                 <button onClick={() => removeResource(res.id)} className="absolute -right-1 -top-1 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 z-10 transition-transform active:scale-90">

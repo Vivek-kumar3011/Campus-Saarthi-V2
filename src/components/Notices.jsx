@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Megaphone, Trash2, Plus, Calendar, MapPin, ShieldCheck, X, Camera, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Megaphone, Trash2, Plus, Calendar, MapPin, ShieldCheck, X, Camera } from 'lucide-react';
 import { db } from '../firebase/config';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
@@ -8,10 +8,9 @@ const Notices = ({ onBack }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
-  
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', description: '', venue: '', date: '', poster: '' // Poster field added
+    name: '', description: '', venue: '', date: '', poster: ''
   });
 
   const ADMIN_PASSWORD = "campusadmin123";
@@ -32,7 +31,6 @@ const Notices = ({ onBack }) => {
 
   useEffect(() => { fetchNotices(); }, []);
 
-  // Image Compression Logic for Poster
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -42,13 +40,13 @@ const Notices = ({ onBack }) => {
         img.src = reader.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800; // Posters can be slightly wider
+          const MAX_WIDTH = 600; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
           setFormData({ ...formData, poster: dataUrl });
         };
       };
@@ -59,15 +57,29 @@ const Notices = ({ onBack }) => {
   const handleAddNotice = async (e) => {
     e.preventDefault();
     try {
+      // 1. Write to 'notices' collection for the main list
       await addDoc(collection(db, "notices"), {
         ...formData,
         createdAt: serverTimestamp()
       });
+
+      // 2. Write to 'notifications' collection to trigger the Bell Icon
+      // Dashboard.jsx listens to this specific collection
+      await addDoc(collection(db, "notifications"), {
+        title: "New Official Notice 📢",
+        desc: formData.name, // e.g., "Holiday Announcement"
+        time: serverTimestamp(),
+        unread: true // This is the key for the red dot count
+      });
+
       setFormData({ name: '', description: '', venue: '', date: '', poster: '' });
       setShowAddForm(false);
       fetchNotices();
       alert("Notice Posted Successfully!");
-    } catch (error) { alert(error.message); }
+    } catch (error) { 
+      console.error(error);
+      alert("Error: " + error.message); 
+    }
   };
 
   const removeNotice = async (id) => {
@@ -118,9 +130,9 @@ const Notices = ({ onBack }) => {
                 <h3 className="font-black text-slate-800 text-xl">New Notice</h3>
                 <button type="button" onClick={() => setShowAddForm(false)} className="p-2 bg-slate-100 rounded-full"><X size={20}/></button>
               </div>
-              <input type="text" placeholder="Notice/Event Title *" className="w-full p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 outline-none font-bold" required
+              <input type="text" placeholder="Notice Title *" className="w-full p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 outline-none font-bold" required
                 onChange={e => setFormData({...formData, name: e.target.value})} />
-              <textarea placeholder="Details..." className="w-full p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 h-28 outline-none"
+              <textarea placeholder="Description..." className="w-full p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 h-28 outline-none"
                 onChange={e => setFormData({...formData, description: e.target.value})} />
               <div className="grid grid-cols-2 gap-3">
                 <input type="text" placeholder="Venue" className="p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 outline-none text-sm"
@@ -129,10 +141,9 @@ const Notices = ({ onBack }) => {
                   onChange={e => setFormData({...formData, date: e.target.value})} />
               </div>
 
-              {/* Poster Upload Logic */}
               <label className="flex items-center justify-center gap-2 p-4 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 cursor-pointer">
                 <Camera size={20} />
-                <span className="text-xs font-bold">{formData.poster ? "Poster Added ✅" : "Add Poster (Optional)"}</span>
+                <span className="text-xs font-bold">{formData.poster ? "Poster Added ✅" : "Add Poster"}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
 
@@ -146,28 +157,27 @@ const Notices = ({ onBack }) => {
             <div className="text-center py-20 font-bold text-slate-400">Loading notices...</div>
           ) : notices.length > 0 ? notices.map((notice) => (
             <div key={notice.id} className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative border-l-4 border-l-orange-500">
-              {/* Show Poster if it exists */}
               {notice.poster && (
-                <img src={notice.poster} alt="Notice Poster" className="w-full h-48 object-cover border-b border-slate-50" />
+                <img src={notice.poster} alt="Poster" className="w-full h-48 object-cover border-b border-slate-50" />
               )}
               <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-2">
                   <h3 className="text-xl font-black text-slate-800 leading-tight">{notice.name}</h3>
                   {isAdmin && password === ADMIN_PASSWORD && (
-                    <button onClick={() => removeNotice(notice.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors">
+                    <button onClick={() => removeNotice(notice.id)} className="text-slate-200 hover:text-red-500 p-2">
                       <Trash2 size={18} />
                     </button>
                   )}
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed mb-6 whitespace-pre-wrap">{notice.description}</p>
-                <div className="flex flex-wrap gap-4">
-                  {notice.date && <div className="flex items-center gap-2 text-slate-500 text-xs font-bold bg-slate-50 px-3 py-2 rounded-xl"><Calendar size={14} className="text-blue-500" /> {notice.date}</div>}
-                  {notice.venue && <div className="flex items-center gap-2 text-slate-500 text-xs font-bold bg-slate-50 px-3 py-2 rounded-xl"><MapPin size={14} className="text-orange-500" /> {notice.venue}</div>}
+                <p className="text-slate-600 text-sm mb-6 whitespace-pre-wrap leading-relaxed">{notice.description}</p>
+                <div className="flex flex-wrap gap-3">
+                  {notice.date && <div className="flex items-center gap-2 text-slate-500 text-[10px] font-black bg-slate-50 px-3 py-2 rounded-xl uppercase tracking-wider"><Calendar size={14} className="text-blue-500" /> {notice.date}</div>}
+                  {notice.venue && <div className="flex items-center gap-2 text-slate-500 text-[10px] font-black bg-slate-50 px-3 py-2 rounded-xl uppercase tracking-wider"><MapPin size={14} className="text-orange-500" /> {notice.venue}</div>}
                 </div>
               </div>
             </div>
           )) : (
-            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200"><p className="text-slate-400 font-bold">No official notices yet</p></div>
+            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold">No official notices yet</div>
           )}
         </div>
       </div>

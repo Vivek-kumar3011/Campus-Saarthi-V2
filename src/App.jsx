@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// Firebase Import
 import { auth } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -7,15 +6,18 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import MessMenu from './components/MessMenu';
-import Schedule from './components/Schedule';
-import Notices from './components/Notices';
+import Schedule from './components/schedule';
 import Resources from './components/Resources';
 import Opportunities from './components/Opportunities';
 import Contacts from './components/Contacts';
 import TaskManager from './components/TaskManager';
-import LostFound from './components/LostFound';
 import BuySell from './components/BuySell';
 import Chatbot from './components/Chatbot';
+import LostFound from './components/LostFound';
+import CommunityChat from './components/CommunityChat';
+import Notices from './components/Notices';
+import ProfileSettings from './components/ProfileSettings';
+import Attendance from './components/Attendance'; 
 import { Loader2 } from 'lucide-react';
 
 function App() {
@@ -23,22 +25,18 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('dashboard');
 
-  // 1. Firebase Auth Listener: Monitors session persistence and verification status
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // Only allow entry if user exists and has clicked the verification link in their email
-      if (currentUser && currentUser.emailVerified) {
+      if (currentUser) {
         setUser(currentUser);
       } else {
         setUser(null);
       }
       setLoading(false);
     });
-
-    return () => unsubscribe(); // Cleanup listener on unmount
+    return () => unsubscribe();
   }, []);
 
-  // 2. Logout Logic: Signs out from Firebase and resets navigation
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -48,46 +46,46 @@ function App() {
     }
   };
 
-  // 3. Global Loading Screen: Displayed while checking Firebase session
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC]">
         <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-        <p className="text-slate-500 font-bold animate-pulse tracking-wide">
-          Syncing Campus Session...
-        </p>
+        <p className="text-slate-500 font-bold tracking-wide">Syncing Session...</p>
       </div>
     );
   }
 
-  // 4. Authentication Gate: If no verified user, show Auth screen
-  if (!user) {
-    return <Auth onLogin={() => {}} />; 
-  }
+  if (!user) return <Auth onLogin={() => {}} />;
 
-  // 5. Navigation Router
   const renderPage = () => {
+    // The case IDs match the 'id' in the features array of Dashboard.jsx
     switch (activePage) {
-      case 'mess':
+      case 'profile': 
+        return <ProfileSettings onBack={() => setActivePage('dashboard')} />;
+      case 'attendance': 
+        return <Attendance onBack={() => setActivePage('dashboard')} />;
+      case 'mess': 
         return <MessMenu onBack={() => setActivePage('dashboard')} />;
-      case 'schedule':
+      case 'schedule': 
         return <Schedule onBack={() => setActivePage('dashboard')} />;
-      case 'notices':
-        return <Notices onBack={() => setActivePage('dashboard')} />;
-      case 'resources':
+      case 'resources': 
         return <Resources onBack={() => setActivePage('dashboard')} />;
-      case 'opportunities':
+      case 'opportunities': 
         return <Opportunities onBack={() => setActivePage('dashboard')} />;
-      case 'contacts':
+      case 'contacts': 
         return <Contacts onBack={() => setActivePage('dashboard')} />;
-      case 'tasks':
+      case 'tasks': 
         return <TaskManager onBack={() => setActivePage('dashboard')} />;
-      case 'lostfound':
+      case 'lostfound': 
         return <LostFound onBack={() => setActivePage('dashboard')} />;
-      case 'buysell':
+      case 'buysell': 
         return <BuySell onBack={() => setActivePage('dashboard')} />;
-      case 'chatbot':
+      case 'chatbot': 
         return <Chatbot onBack={() => setActivePage('dashboard')} />;
+      case 'chat': 
+        return <CommunityChat onBack={() => setActivePage('dashboard')} />; 
+      case 'notices': 
+        return <Notices onBack={() => setActivePage('dashboard')} />; 
       default:
         return (
           <Dashboard 
@@ -100,7 +98,7 @@ function App() {
   };
 
   return (
-    <div className="app-container min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
       {renderPage()}
     </div>
   );

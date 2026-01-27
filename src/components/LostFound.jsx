@@ -34,7 +34,6 @@ const LostFound = ({ onBack }) => {
     fetchFirebaseItems();
   }, []);
 
-  // Updated Image Upload with Compression (Solve for "Insufficient Permissions" caused by large size)
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -44,15 +43,12 @@ const LostFound = ({ onBack }) => {
         img.src = reader.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 500; // Optimal size for Lost & Found
+          const MAX_WIDTH = 500; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
-
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Quality is reduced to 0.6 to ensure it stays well under 1MB
           const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
           setFormData({ ...formData, image: dataUrl });
         };
@@ -66,15 +62,24 @@ const LostFound = ({ onBack }) => {
     if (!formData.description || !formData.contact) return alert("Description and Contact are required!");
     
     try {
+      // 1. SAVE TO 'lostfound' COLLECTION
       await addDoc(collection(db, "lostfound"), {
         ...formData,
         createdAt: serverTimestamp()
+      });
+
+      // 2. TRIGGER THE BELL ICON (notifications collection)
+      await addDoc(collection(db, "notifications"), {
+        title: `Item ${formData.status} 🔍`,
+        desc: formData.description,
+        time: serverTimestamp(),
+        unread: true
       });
       
       setFormData({ name: '', contact: '', description: '', status: 'Lost', image: '' });
       setShowAddForm(false);
       fetchFirebaseItems();
-      alert("Successfully posted to Cloud!");
+      alert("Success! The campus has been notified.");
     } catch (error) {
       console.error("Save Error:", error);
       alert("Cloud Save Error: " + error.message);
@@ -117,7 +122,7 @@ const LostFound = ({ onBack }) => {
             </div>
             <h2 className="text-2xl font-black text-slate-800">Lost & Found</h2>
           </div>
-          <button onClick={() => setShowAddForm(true)} className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg">
+          <button onClick={() => setShowAddForm(true)} className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg active:scale-95 transition-transform">
             <Plus size={24} />
           </button>
         </div>
@@ -126,8 +131,6 @@ const LostFound = ({ onBack }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            id="searchItems"
-            name="searchItems"
             placeholder="Search items..." 
             className="w-full pl-12 pr-4 py-4 bg-slate-100 rounded-2xl border-none outline-none focus:ring-2 focus:ring-orange-500 font-medium"
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -156,7 +159,7 @@ const LostFound = ({ onBack }) => {
                     const pass = prompt("Enter contact info to confirm removal:");
                     if (pass) deleteItem(item.id, pass);
                   }}
-                  className="text-slate-300 hover:text-red-500"
+                  className="text-slate-200 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -164,7 +167,7 @@ const LostFound = ({ onBack }) => {
               <p className="text-slate-800 font-bold text-lg mb-2">{item.description}</p>
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <Phone size={14} />
+                  <Phone size={14} className="text-orange-400" />
                   <span className="text-xs font-bold">{item.contact}</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-medium">{item.date}</span>
@@ -204,8 +207,6 @@ const LostFound = ({ onBack }) => {
               </div>
 
               <textarea 
-                id="lostItemDesc"
-                name="lostItemDesc"
                 placeholder="Item Description (e.g. Black HP Laptop Bag)*" 
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500 h-24"
                 value={formData.description}
@@ -215,8 +216,6 @@ const LostFound = ({ onBack }) => {
 
               <input 
                 type="text" 
-                id="lostItemContact"
-                name="lostItemContact"
                 placeholder="Your Contact (Phone/Email)*" 
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none ring-1 ring-slate-200"
                 value={formData.contact}
@@ -226,7 +225,7 @@ const LostFound = ({ onBack }) => {
 
               <label className="flex items-center justify-center gap-2 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 cursor-pointer">
                 <Camera size={20} />
-                <span className="text-xs font-bold">{formData.image ? "Image Ready" : "Upload Photo"}</span>
+                <span className="text-xs font-bold">{formData.image ? "Image Ready ✅" : "Upload Photo"}</span>
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
 
